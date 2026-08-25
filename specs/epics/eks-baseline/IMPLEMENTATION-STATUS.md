@@ -10,7 +10,7 @@ edited to match reality here — this file is where reality is recorded.
 |----|-----------|--------|----|-------------|
 | E0 | `stack-granite` catalog | ⛔ Blocked (publish) | [stack-granite@7af81da](https://github.com/sourceplane/stack-granite/commit/7af81da) | Catalog gate green (6/6 compositions pack and export); a scratch consumer plans all four new types and the rendered steps confirm capability filtering. **Not published** — see Deviations. |
 | E1 | Repo foundation | 🚧 In review | #2 | `pnpm typecheck` / `lint` / `test` green (17 tests); `orun validate` passes; `orun plan` produces 9 jobs across 3 environments. CI workflow **not landed** — see Deviations. |
-| E2 | Terraform AWS estate | 🗓️ Planned | — | — |
+| E2 | Terraform AWS estate | 🚧 In review | #3 | All six roots: `terraform fmt -check` clean, `init -backend=false` + `validate` **Success**. `orun plan` → 27 jobs; DAG is `vpc → eks → {platform-addons, documents-deps, identity-deps, gateway-deps}`. Zero `dev` jobs carry the OIDC step; zero `Apply` steps outside a main push. |
 | E3 | `documents-service` | 🗓️ Planned | — | — |
 | E4 | `identity-service` | 🗓️ Planned | — | — |
 | E5 | `api-gateway` | 🗓️ Planned | — | — |

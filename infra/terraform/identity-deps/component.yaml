@@ -1,0 +1,52 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: identity-deps
+  description: "RDS Postgres, ECR, IRSA role and CloudWatch for identity-service"
+  labels:
+    domain: infra
+    scope: aws
+spec:
+  type: terraform-aws
+  lifecycle: production
+  owner: platform
+  domain: infra
+  path: infra/terraform/identity-deps
+  dependsOn:
+    - component: eks
+  parameters:
+    stackName: identity-deps
+    terraformDir: terraform
+    terraformVersion: "1.15.3"
+    # SEC-JOB: post-apply these outputs are queued on the runner's sink and
+    # lease-published onto the project/{{env}} rung by the runner. Downstream
+    # components read the same keys through secretEnv.
+    secretOutputs: "IDENTITY_DATABASE_URL=database_url,IDENTITY_DATABASE_HOST=database_host,IDENTITY_IRSA_ROLE_ARN=irsa_role_arn,IDENTITY_ECR_REGISTRY=ecr_registry,IDENTITY_ECR_REPOSITORY_URL=ecr_repository_url"
+  secretEnv:
+    TF_VAR_vpcId: "secret://cumulus/cumulus/{{ .environment }}/VPC_ID"
+    TF_VAR_vpcCidr: "secret://cumulus/cumulus/{{ .environment }}/VPC_CIDR"
+    TF_VAR_privateSubnetIds: "secret://cumulus/cumulus/{{ .environment }}/PRIVATE_SUBNET_IDS"
+    TF_VAR_oidcProviderArn: "secret://cumulus/cumulus/{{ .environment }}/OIDC_PROVIDER_ARN"
+    TF_VAR_oidcProviderUrl: "secret://cumulus/cumulus/{{ .environment }}/OIDC_PROVIDER_URL"
+    TF_VAR_nodeSecurityGroupId: "secret://cumulus/cumulus/{{ .environment }}/NODE_SECURITY_GROUP_ID"
+  subscribe:
+    environments:
+      # dev is credential-free: the validate profile excludes the OIDC
+      # capability entirely, so this lane has no path to AWS.
+      - name: dev
+        profile: validate
+      - name: stage
+        profile: plan-only
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
+      - name: prod
+        profile: plan-only
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
+  labels:
+    team: platform
+    layer: infrastructure
