@@ -8,7 +8,7 @@ public endpoint, all verified in CI.
 
 | Field | Value |
 |-------|-------|
-| Status | **Draft** |
+| Status | **In progress** (E0–E2 landed; E3–E6 open) |
 | Cluster | **E** (E0–E6) |
 | Owner(s) | `stack-granite`, `infra/terraform/*`, `apps/*`, `deploy/helm/*`, `packages/*` |
 | Target branch | `main` (one milestone, one PR) |
@@ -52,9 +52,9 @@ one, and it is E7 in a later phase.
 
 | ID | Milestone | Status |
 |----|-----------|--------|
-| E0 | `stack-granite` — the composition catalog | 🗓️ Planned |
-| E1 | Repo foundation — workspace, contracts, intent, CI | 🗓️ Planned |
-| E2 | Terraform AWS estate — VPC, EKS, platform addons | 🗓️ Planned |
+| E0 | `stack-granite` — the composition catalog | ⛔ Blocked (publish only; authored + verified) |
+| E1 | Repo foundation — workspace, contracts, intent, CI | ✅ Shipped (#2) — CI workflow parked, see status |
+| E2 | Terraform AWS estate — VPC, EKS, platform addons | ✅ Shipped (#3) |
 | E3 | `documents-service` — S3 + Redis cache-aside, chart | 🗓️ Planned |
 | E4 | `identity-service` — Postgres, migrations lane, chart | 🗓️ Planned |
 | E5 | `api-gateway` — the only public ingress | 🗓️ Planned |
