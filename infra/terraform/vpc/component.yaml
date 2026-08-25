@@ -1,0 +1,45 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: vpc
+  description: "Networking primitives: 2 AZs, public and private subnets, IGW, NAT per AZ, flow logs"
+  labels:
+    domain: infra
+    scope: aws
+spec:
+  type: terraform-aws
+  lifecycle: production
+  owner: platform
+  domain: infra
+  path: infra/terraform/vpc
+
+  parameters:
+    stackName: vpc
+    terraformDir: terraform
+    terraformVersion: "1.15.3"
+    # SEC-JOB: post-apply these outputs are queued on the runner's sink and
+    # lease-published onto the project/{{env}} rung by the runner. Downstream
+    # components read the same keys through secretEnv.
+    secretOutputs: "VPC_ID=vpc_id,VPC_CIDR=vpc_cidr,PRIVATE_SUBNET_IDS=private_subnet_ids,PUBLIC_SUBNET_IDS=public_subnet_ids"
+
+  subscribe:
+    environments:
+      # dev is credential-free: the validate profile excludes the OIDC
+      # capability entirely, so this lane has no path to AWS.
+      - name: dev
+        profile: validate
+      - name: stage
+        profile: plan-only
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
+      - name: prod
+        profile: plan-only
+        profileRules:
+          - profile: apply
+            when:
+              triggerRef: github-push-main
+  labels:
+    team: platform
+    layer: infrastructure
