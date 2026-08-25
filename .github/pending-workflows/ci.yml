@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# PR runs share a group per ref and superseded runs are cancelled (each push
+# re-plans anyway), which stops stale fan-outs from starving the runner pool.
+# Main pushes get a unique group each: convergence runs plan --changed per
+# commit, and GitHub replaces *pending* runs in a shared group even with
+# cancel-in-progress false — a superseded main run's components would silently
+# never converge.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      job-matrix: ${{ steps.matrix.outputs.job-matrix }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: sourceplane/orun-action@v1.2.0
+        with:
+          version: v2.53.2
+      - env:
+          ORUN_VERBOSE: "1"
+        run: |
+          set -euo pipefail
+          orun plan \
+            --from-ci github \
+            --event-file "$GITHUB_EVENT_PATH" \
+            --intent intent.yaml \
+            --output plan.json \
+            --changed
+      - id: matrix
+        run: |
+          echo "job-matrix=$(jq -c '[.jobs[] | {"job-id": .id, "job-name": .checkName}]' plan.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: orun-plan
+          path: plan.json
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    if: ${{ needs.plan.outputs.job-matrix != '[]' && needs.plan.outputs.job-matrix != '' }}
+    strategy:
+      fail-fast: false
+      # Stagger the fan-out: every lane hits the lease-bound resolve at job
+      # start, and an unbounded herd saturates it. The orun DAG already
+      # serializes dependents, so capped parallelism costs little wall-clock.
+      max-parallel: 8
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.job-matrix) }}
+    name: ${{ matrix.job-name }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v8
+        with:
+          name: orun-plan
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sourceplane/orun-action@v1.2.0
+        with:
+          version: v2.53.2
+      # exec-id is the RUN id alone (no attempt suffix): a `gh run rerun
+      # --failed` then RESUMES the same orun execution — jobs that succeeded in
+      # a prior attempt stay completed, so re-run lanes' cross-job dependencies
+      # are already satisfied instead of waiting forever on lanes that are not
+      # re-running. --retry re-opens THIS lane's job when it terminally failed
+      # in a prior attempt (no-op on first attempts).
+      - run: |
+          retry_flag=""
+          if [ "${GITHUB_RUN_ATTEMPT:-1}" -gt 1 ]; then retry_flag="--retry"; fi
+          orun run \
+            --plan plan.json \
+            --runner github-actions \
+            --remote-state \
+            --job "${{ matrix.job-id }}" \
+            --exec-id "${{ github.run_id }}" \
+            $retry_flag
+        env:
+          # GITHUB_TOKEN is the only credential CI holds — GitHub-issued and
+          # ephemeral. Through phase 1 no lane resolves an AWS credential at
+          # all: every component subscribes to a profile whose capability set
+          # excludes the OIDC step, so there is nothing provider-shaped for CI
+          # to hold. That changes at E7, and it changes in the components, not
+          # here.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_CONFIG: /home/runner/.docker

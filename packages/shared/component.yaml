@@ -1,0 +1,32 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: shared
+  description: "Generic helpers: ids, structured logging, config, error taxonomy"
+spec:
+  type: turbo-package
+  lifecycle: production
+  owner: platform
+  domain: foundation
+  dependsOn:
+    # Declared so a contracts change marks this package changed and re-verifies
+    # it. Without the edge, `orun plan --changed` keys on `path:` alone and a
+    # package can ship against a months-old copy of a contract.
+    - component: contracts
+  path: packages/shared
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "10.12.1"
+    buildCommand: pnpm exec turbo run build --filter=@cumulus/shared
+    typecheckCommand: pnpm exec turbo run typecheck --filter=@cumulus/shared
+  subscribe:
+    environments:
+      - name: dev
+        profile: verify
+      - name: stage
+        profile: verify
+      - name: prod
+        profile: verify
+  labels:
+    team: platform
+    layer: foundation

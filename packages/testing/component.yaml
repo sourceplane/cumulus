@@ -1,0 +1,32 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: testing
+  description: Deterministic fixtures and smoke-lane helpers
+spec:
+  type: turbo-package
+  lifecycle: production
+  owner: platform
+  domain: foundation
+  dependsOn:
+    # Declared so a contracts change marks this package changed and re-verifies
+    # it. Without the edge, `orun plan --changed` keys on `path:` alone and a
+    # package can ship against a months-old copy of a contract.
+    - component: contracts
+  path: packages/testing
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "10.12.1"
+    buildCommand: pnpm exec turbo run build --filter=@cumulus/testing
+    typecheckCommand: pnpm exec turbo run typecheck --filter=@cumulus/testing
+  subscribe:
+    environments:
+      - name: dev
+        profile: verify
+      - name: stage
+        profile: verify
+      - name: prod
+        profile: verify
+  labels:
+    team: platform
+    layer: foundation

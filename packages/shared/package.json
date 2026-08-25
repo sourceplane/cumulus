@@ -1,0 +1,29 @@
+{
+  "name": "@cumulus/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ids": "./src/ids.ts",
+    "./errors": "./src/errors.ts",
+    "./logging": "./src/logging.ts",
+    "./config": "./src/config.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cumulus/eslint-config": "workspace:*",
+    "@cumulus/tsconfig": "workspace:*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@cumulus/contracts": "workspace:*"
+  }
+}

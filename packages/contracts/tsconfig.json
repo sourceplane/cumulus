@@ -1,0 +1,7 @@
+{
+  "extends": "@cumulus/tsconfig/package-lib.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}
