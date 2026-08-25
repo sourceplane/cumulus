@@ -1,0 +1,27 @@
+{
+  "name": "@cumulus/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./health": "./src/health.ts",
+    "./errors": "./src/errors.ts",
+    "./tenancy": "./src/tenancy.ts",
+    "./documents": "./src/documents.ts",
+    "./identity": "./src/identity.ts",
+    "./idempotency": "./src/idempotency.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@cumulus/eslint-config": "workspace:*",
+    "@cumulus/tsconfig": "workspace:*",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

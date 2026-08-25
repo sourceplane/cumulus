@@ -1,0 +1,27 @@
+apiVersion: sourceplane.io/v1
+kind: Component
+metadata:
+  name: contracts
+  description: Shared API, tenancy, health, error and idempotency contracts
+spec:
+  type: turbo-package
+  lifecycle: production
+  owner: platform
+  domain: foundation
+  path: packages/contracts
+  parameters:
+    nodeVersion: "22"
+    pnpmVersion: "10.12.1"
+    buildCommand: pnpm exec turbo run build --filter=@cumulus/contracts
+    typecheckCommand: pnpm exec turbo run typecheck --filter=@cumulus/contracts
+  subscribe:
+    environments:
+      - name: dev
+        profile: verify
+      - name: stage
+        profile: verify
+      - name: prod
+        profile: verify
+  labels:
+    team: platform
+    layer: foundation

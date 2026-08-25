@@ -1,0 +1,7 @@
+{
+  "extends": "@cumulus/tsconfig/service.json",
+  "compilerOptions": {
+    "rootDir": "."
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "@cumulus/tsconfig",
+  "version": "0.0.0",
+  "private": true,
+  "files": ["*.json"],
+  "license": "MIT"
+}

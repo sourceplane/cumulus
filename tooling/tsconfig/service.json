@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "compilerOptions": {
+    // Services run on Node, not in a bundler or a workerd isolate: they resolve
+    // real files at runtime, so NodeNext is the resolution that matches what
+    // actually happens at import time.
+    "module": "NodeNext",
+    "moduleResolution": "nodenext",
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "rootDir": "src",
+    "outDir": "dist"
+  }
+}

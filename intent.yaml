@@ -1,0 +1,162 @@
+apiVersion: sourceplane.io/v1
+kind: Intent
+
+metadata:
+  name: cumulus
+  description: Multi-tenant SaaS baseline on AWS EKS — Terraform data plane, TypeScript services, Helm releases
+  namespace: sourceplane
+
+execution:
+  state:
+    backendUrl: https://api-edge-prod.oruncloud.workers.dev
+    # Declared, enforced tenancy: the workspace claim is sent on every remote op
+    # (including the credential-free CI OIDC exchange) so orun-cloud can enforce
+    # claim ⊆ authorized. Declaring it implies strict mode — a non-interactive
+    # run that resolves no workspace fails fast.
+    workspace: ws_4975BJ7P
+    requireOrg: true
+    autopushCatalog: true
+
+compositions:
+  sources:
+    # The composition stack lives in sourceplane/stack-granite and is consumed
+    # as a published OCI artifact rather than a repo-local directory. Pin an
+    # explicit version: a bare repository reference resolves to `:latest`, which
+    # would let a catalog release change this repo's execution contracts without
+    # a commit here. Bumping the tag is the deliberate upgrade step.
+    - name: stack-granite
+      kind: oci
+      ref: oci://ghcr.io/sourceplane/stack-granite:0.1.0
+  resolution:
+    precedence:
+      - stack-granite
+    bindings:
+      terraform-aws: stack-granite
+      container-image: stack-granite
+      helm-release: stack-granite
+      node-service-turbo: stack-granite
+      turbo-package: stack-granite
+
+discovery:
+  roots:
+    - apps/
+    - infra/
+    - packages/
+    - deploy/
+    - tests/
+
+automation:
+  triggerBindings:
+    github-pull-request:
+      description: Pull request validation
+      on:
+        provider: github
+        event: pull_request
+        actions:
+          - opened
+          - synchronize
+          - reopened
+          - ready_for_review
+        baseBranches:
+          - main
+      plan:
+        scope: changed
+        base: pull_request.base.sha
+        head: pull_request.head.sha
+
+    github-push-main:
+      description: Main branch stack convergence after merge
+      on:
+        provider: github
+        event: push
+        branches:
+          - main
+
+    local-development:
+      description: Local testing with full Terraform execution
+      on:
+        provider: local
+
+environments:
+  # dev is the credential-free lane and the one that carries phase 1. It has no
+  # AWS account, no cluster and no state backend for Terraform — it exists to
+  # prove every component is well-formed on every PR. See
+  # specs/epics/eks-baseline/risks-and-open-questions.md § AWS account.
+  dev:
+    activation:
+      triggerRefs:
+        - github-pull-request
+        - github-push-main
+        - local-development
+    parameterDefaults:
+      terraform-aws:
+        lane: verify
+        namespace: sourceplane
+        namespacePrefix: dev-
+        owner: sourceplane
+        repo: cumulus
+        awsRegion: ap-southeast-1
+      container-image:
+        owner: sourceplane
+        repo: cumulus
+      helm-release:
+        kubernetesVersion: "1.31.0"
+    policies:
+      requireApproval: "false"
+
+  stage:
+    activation:
+      triggerRefs:
+        - github-pull-request
+        - github-push-main
+    parameterDefaults:
+      terraform-aws:
+        lane: deploy
+        namespace: sourceplane
+        namespacePrefix: stg-
+        owner: sourceplane
+        repo: cumulus
+        awsRegion: ap-southeast-1
+      container-image:
+        owner: sourceplane
+        repo: cumulus
+      helm-release:
+        kubernetesVersion: "1.31.0"
+        namespace: cumulus-stage
+    policies:
+      requireApproval: "false"
+
+  prod:
+    activation:
+      triggerRefs:
+        - github-pull-request
+        - github-push-main
+    promotion:
+      dependsOn:
+        - environment: stage
+    parameterDefaults:
+      terraform-aws:
+        lane: deploy
+        namespace: sourceplane
+        namespacePrefix: prod-
+        owner: sourceplane
+        repo: cumulus
+        awsRegion: ap-southeast-1
+      container-image:
+        owner: sourceplane
+        repo: cumulus
+      helm-release:
+        kubernetesVersion: "1.31.0"
+        namespace: cumulus-prod
+    policies:
+      requireApproval: "false"
+
+# Repo-level catalog entity: front page + role-tagged docs, pinned to the commit
+# by `orun plan`.
+repo:
+  displayName: cumulus
+  docs:
+    overview: README.md
+    pages:
+      - { path: specs/epics/eks-baseline/README.md, role: reference, title: "Epic: eks-baseline" }
+      - { path: specs/epics/eks-baseline/design.md, role: architecture, title: Architecture }
